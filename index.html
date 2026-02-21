@@ -1,0 +1,382 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<title>Таблица лидеров — Домашние задания</title>
+
+<style>
+  :root{
+    --bg:#0b1220;
+    --card:#121b2f;
+    --card2:#0f1730;
+    --text:#eaf0ff;
+    --muted:#a9b6d8;
+    --line:rgba(255,255,255,.10);
+    --ok:#3ee08f;
+    --bad:#ff6b6b;
+    --accent:#7aa7ff;
+    --shadow: 0 18px 40px rgba(0,0,0,.35);
+    --r:18px;
+  }
+  *{box-sizing:border-box}
+  body{
+    margin:0; min-height:100vh;
+    font-family: system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif;
+    color:var(--text);
+    background:
+      radial-gradient(1000px 500px at 10% 0%, rgba(122,167,255,.25), transparent 60%),
+      radial-gradient(900px 500px at 90% 20%, rgba(62,224,143,.18), transparent 60%),
+      var(--bg);
+    padding: 24px;
+  }
+  .wrap{max-width:1000px;margin:0 auto;display:grid;gap:16px}
+  header{
+    display:flex; gap:14px; align-items:flex-start; justify-content:space-between;
+    padding: 18px 18px;
+    background: linear-gradient(180deg, rgba(255,255,255,.06), rgba(255,255,255,.02));
+    border: 1px solid var(--line);
+    border-radius: var(--r);
+    box-shadow: var(--shadow);
+  }
+  h1{margin:0;font-size:20px;letter-spacing:.2px}
+  .sub{margin:6px 0 0;color:var(--muted);font-size:13px;line-height:1.35}
+  .pill{
+    display:inline-flex; align-items:center; gap:8px;
+    padding:10px 12px; border-radius: 999px;
+    border: 1px solid var(--line);
+    background: rgba(255,255,255,.04);
+    color: var(--muted);
+    font-size: 13px;
+    white-space: nowrap;
+    user-select:none;
+  }
+
+  .grid{
+    display:grid;
+    grid-template-columns: 360px 1fr;
+    gap:16px;
+  }
+  @media (max-width: 880px){
+    .grid{grid-template-columns:1fr}
+  }
+
+  .card{
+    background: linear-gradient(180deg, rgba(255,255,255,.05), rgba(255,255,255,.02));
+    border:1px solid var(--line);
+    border-radius: var(--r);
+    box-shadow: var(--shadow);
+    padding: 16px;
+  }
+  .card h2{margin:0 0 10px;font-size:16px}
+
+  label{display:block;color:var(--muted);font-size:12px;margin:10px 0 6px}
+
+  input{
+    width:100%;
+    padding:12px 12px;
+    border-radius: 12px;
+    border:1px solid var(--line);
+    background: rgba(0,0,0,.20);
+    color: var(--text);
+    outline:none;
+  }
+  input:focus{
+    border-color: rgba(122,167,255,.55);
+    box-shadow: 0 0 0 4px rgba(122,167,255,.14)
+  }
+
+  .row{display:flex; gap:10px; align-items:center}
+
+  .btn{
+    border:1px solid var(--line);
+    background: rgba(255,255,255,.05);
+    color: var(--text);
+    padding: 11px 12px;
+    border-radius: 14px;
+    cursor:pointer;
+    transition: transform .08s ease, background .18s ease, border-color .18s ease;
+    user-select:none;
+    font-weight: 650;
+    font-size: 14px;
+  }
+  .btn:hover{background: rgba(255,255,255,.08); border-color: rgba(255,255,255,.18)}
+  .btn:active{transform: scale(.98)}
+  .btn.ok{border-color: rgba(62,224,143,.35); background: rgba(62,224,143,.10)}
+  .btn.bad{border-color: rgba(255,107,107,.35); background: rgba(255,107,107,.10)}
+  .btn.accent{border-color: rgba(122,167,255,.45); background: rgba(122,167,255,.12)}
+
+  .small{font-size:12px;color:var(--muted);line-height:1.35;margin:10px 0 0}
+
+  table{
+    width:100%;
+    border-collapse: collapse;
+    overflow:hidden;
+    border-radius: 16px;
+    border: 1px solid var(--line);
+    background: rgba(0,0,0,.18);
+  }
+  thead th{
+    text-align:left;
+    font-size:12px;
+    color: var(--muted);
+    padding: 12px;
+    border-bottom: 1px solid var(--line);
+  }
+  tbody td{
+    padding: 12px;
+    border-bottom: 1px solid rgba(255,255,255,.06);
+    vertical-align: middle;
+  }
+  tbody tr:last-child td{border-bottom:none}
+
+  .rank{
+    font-variant-numeric: tabular-nums;
+    width: 72px;
+    color: var(--muted);
+  }
+  .name{
+    font-weight: 750;
+  }
+  .score{
+    font-variant-numeric: tabular-nums;
+    font-weight: 850;
+  }
+  .actions{
+    display:flex; gap:8px; justify-content:flex-end; flex-wrap:wrap;
+  }
+
+  .badge{
+    display:inline-flex;
+    align-items:center;
+    justify-content:center;
+    min-width:32px;
+    height:24px;
+    padding:0 10px;
+    border-radius:999px;
+    border:1px solid var(--line);
+    background: rgba(255,255,255,.04);
+    color: var(--muted);
+    font-size:12px;
+    margin-left:10px;
+  }
+</style>
+</head>
+
+<body>
+  <div class="wrap">
+    <header>
+      <div>
+        <h1>🏆 Таблица лидеров по домашним заданиям</h1>
+        <div class="sub">Добавляй учеников и ставь <b>+1</b> за ДЗ. Каждые <b>3 подряд</b> дают <b>+5</b> бонус.</div>
+      </div>
+      <div class="pill" id="statsPill">👩‍🎓 0 учеников · ✅ 0 выполнений</div>
+    </header>
+
+    <div class="grid">
+      <section class="card">
+        <h2>➕ Добавить ученика</h2>
+
+        <label for="nameInput">Имя ученика</label>
+        <input id="nameInput" placeholder="Например: Ануар" maxlength="30" />
+
+        <div class="row" style="margin-top:12px">
+          <button class="btn accent" id="addBtn">Добавить</button>
+          <button class="btn" id="demoBtn" title="Добавить примеры">Демо</button>
+          <button class="btn bad" id="resetBtn" title="Сбросить всё">Сброс</button>
+        </div>
+
+        <p class="small">
+          Данные сохраняются в браузере (localStorage). Если открыть на другом устройстве — будет отдельная таблица.
+        </p>
+      </section>
+
+      <section class="card">
+        <h2>📊 Рейтинг</h2>
+        <div class="sub" style="margin-bottom:10px">Сортировка: больше баллов → выше место.</div>
+
+        <table>
+          <thead>
+            <tr>
+              <th class="rank">Место</th>
+              <th>Ученик</th>
+              <th style="width:140px">Баллы</th>
+              <th style="text-align:right">Действия</th>
+            </tr>
+          </thead>
+          <tbody id="tbody"></tbody>
+        </table>
+
+        <p class="small" style="margin-top:10px">
+          Подсказка: <b>-1</b> сбрасывает серию (регулярность), <b>+1</b> её увеличивает.
+        </p>
+      </section>
+    </div>
+  </div>
+
+<script>
+  const KEY = "leaderboard_data";
+  let data = loadData();
+
+  const nameInput = document.getElementById("nameInput");
+  const tbody = document.getElementById("tbody");
+  const statsPill = document.getElementById("statsPill");
+
+  const addBtn = document.getElementById("addBtn");
+  const demoBtn = document.getElementById("demoBtn");
+  const resetBtn = document.getElementById("resetBtn");
+
+  function loadData(){
+    try{
+      const saved = localStorage.getItem(KEY);
+      return saved ? JSON.parse(saved) : [];
+    }catch(e){
+      return [];
+    }
+  }
+
+  function saveData(){
+    localStorage.setItem(KEY, JSON.stringify(data));
+  }
+
+  function normalizeName(s){
+    return (s || "").trim().replace(/\s+/g," ");
+  }
+
+  function totalScores(){
+    return data.reduce((sum, s) => sum + (s.score || 0), 0);
+  }
+
+  function addStudent(){
+    const name = normalizeName(nameInput.value);
+    if(!name) return alert("Введите имя");
+
+    if(data.some(s => (s.name||"").toLowerCase() === name.toLowerCase())){
+      return alert("Такой ученик уже есть");
+    }
+
+    data.push({
+      id: (Math.random().toString(16).slice(2) + Date.now().toString(16)),
+      name,
+      score: 0,
+      streak: 0
+    });
+
+    nameInput.value="";
+    nameInput.focus();
+    saveData();
+    render();
+  }
+
+  function changeScore(id, delta){
+    const student = data.find(s => s.id === id);
+    if(!student) return;
+
+    student.score = Math.max(0, Math.floor(student.score || 0));
+    student.streak = Math.max(0, Math.floor(student.streak || 0));
+
+    if(delta > 0){
+      student.score += 1;
+      student.streak += 1;
+
+      if(student.streak === 3){
+        student.score += 5;
+        student.streak = 0;
+        alert("🔥 Бонус +5 за регулярность!");
+      }
+    }else{
+      student.score = Math.max(0, student.score - 1);
+      student.streak = 0;
+    }
+
+    saveData();
+    render();
+  }
+
+  function removeStudent(id){
+    const st = data.find(s => s.id === id);
+    const ok = confirm(`Удалить "${st ? st.name : "ученика"}"?`);
+    if(!ok) return;
+
+    data = data.filter(s => s.id !== id);
+    saveData();
+    render();
+  }
+
+  function render(){
+    const sorted = [...data].sort((a,b)=>{
+      if((b.score||0) !== (a.score||0)) return (b.score||0) - (a.score||0);
+      return (a.name||"").localeCompare((b.name||""), "ru");
+    });
+
+    statsPill.textContent = `👩‍🎓 ${sorted.length} учеников · ✅ ${totalScores()} выполнений`;
+
+    tbody.innerHTML = "";
+
+    if(sorted.length === 0){
+      const tr = document.createElement("tr");
+      tr.innerHTML = `<td class="rank">—</td><td colspan="3" style="color:#a9b6d8">Пока пусто. Добавь ученика слева 🙂</td>`;
+      tbody.appendChild(tr);
+      return;
+    }
+
+    sorted.forEach((student,index)=>{
+      const tr = document.createElement("tr");
+      const medal = index === 0 ? "🥇" : index === 1 ? "🥈" : index === 2 ? "🥉" : "";
+
+      tr.innerHTML = `
+        <td class="rank">#${index+1}</td>
+        <td class="name">${escapeHtml(student.name)} ${medal ? `<span class="badge">${medal} ТОП</span>` : ""}</td>
+        <td class="score">${student.score || 0}</td>
+        <td>
+          <div class="actions">
+            <button class="btn ok" type="button" onclick="changeScore('${student.id}',1)">+1</button>
+            <button class="btn bad" type="button" onclick="changeScore('${student.id}',-1)">-1</button>
+            <button class="btn" type="button" onclick="removeStudent('${student.id}')">Удалить</button>
+          </div>
+        </td>
+      `;
+      tbody.appendChild(tr);
+    });
+  }
+
+  function escapeHtml(str){
+    return (str||"")
+      .replaceAll("&","&amp;")
+      .replaceAll("<","&lt;")
+      .replaceAll(">","&gt;")
+      .replaceAll('"',"&quot;")
+      .replaceAll("'","&#039;");
+  }
+
+  addBtn.addEventListener("click", addStudent);
+  nameInput.addEventListener("keydown", (e)=>{ if(e.key === "Enter") addStudent(); });
+
+  demoBtn.addEventListener("click", ()=>{
+    const samples = ["ученик1", "ученик2", "ученик3", "ученик4"];
+    samples.forEach(n=>{
+      if(!data.some(s => (s.name||"").toLowerCase() === n.toLowerCase())){
+        data.push({
+          id: (Math.random().toString(16).slice(2) + Date.now().toString(16)),
+          name: n,
+          score: 0,
+          streak: 0
+        });
+      }
+    });
+    saveData();
+    render();
+  });
+
+  resetBtn.addEventListener("click", ()=>{
+    const ok = confirm("Сбросить всё?");
+    if(!ok) return;
+    data = [];
+    localStorage.removeItem(KEY);
+    render();
+  });
+
+  render();
+</script>
+</body>
+</html>
