@@ -1,0 +1,241 @@
+<script>
+  // --- Хранилище ---
+  const KEY = "hw_leaderboard_v1";
+
+  // data = [{id, name, score, streak}]
+  let data = load();
+
+  // --- Элементы ---
+  const nameInput = document.getElementById("nameInput");
+  const addBtn = document.getElementById("addBtn");
+  const demoBtn = document.getElementById("demoBtn");
+  const resetBtn = document.getElementById("resetBtn");
+  const tbody = document.getElementById("tbody");
+  const statsPill = document.getElementById("statsPill");
+  const toast = document.getElementById("toast");
+
+  const exportBtn = document.getElementById("exportBtn");
+  const importBtn = document.getElementById("importBtn");
+  const jsonBox = document.getElementById("jsonBox");
+
+  // --- Утилиты ---
+  function uid() {
+    return Math.random().toString(16).slice(2) + Date.now().toString(16);
+  }
+
+  function normalizeName(s) {
+    return (s || "").trim().replace(/\s+/g, " ");
+  }
+
+  function save() {
+    localStorage.setItem(KEY, JSON.stringify(data));
+    showToast("Сохранено ✅");
+  }
+
+  function load() {
+    try {
+      const raw = localStorage.getItem(KEY);
+      if (!raw) return [];
+      const arr = JSON.parse(raw);
+      if (!Array.isArray(arr)) return [];
+
+      return arr
+        .filter(x => x && typeof x.name === "string" && typeof x.score === "number")
+        .map(x => ({
+          id: x.id || uid(),
+          name: x.name,
+          score: Math.max(0, Math.floor(x.score)),
+          streak: Math.max(0, Math.floor(x.streak || 0))
+        }));
+    } catch (e) {
+      return [];
+    }
+  }
+
+  function showToast(text) {
+    toast.textContent = text;
+    toast.classList.add("show");
+    clearTimeout(showToast._t);
+    showToast._t = setTimeout(() => toast.classList.remove("show"), 1200);
+  }
+
+  function totalScores() {
+    return data.reduce((sum, x) => sum + x.score, 0);
+  }
+
+  function escapeHtml(str) {
+    return str
+      .replaceAll("&", "&amp;")
+      .replaceAll("<", "&lt;")
+      .replaceAll(">", "&gt;")
+      .replaceAll('"', "&quot;")
+      .replaceAll("'", "&#039;");
+  }
+
+  // --- Рендер ---
+  function render() {
+    // сортировка: score desc, затем name asc
+    const sorted = [...data].sort((a, b) => {
+      if (b.score !== a.score) return b.score - a.score;
+      return a.name.localeCompare(b.name, "ru");
+    });
+
+    // статистика
+    statsPill.textContent = `👩‍🎓 ${sorted.length} учеников · ✅ ${totalScores()} выполнений`;
+
+    // таблица
+    tbody.innerHTML = "";
+    if (sorted.length === 0) {
+      const tr = document.createElement("tr");
+      tr.innerHTML = `
+        <td class="rank">—</td>
+        <td colspan="3" style="color:#a9b6d8">Пока пусто. Добавь ученика слева 🙂</td>
+      `;
+      tbody.appendChild(tr);
+      return;
+    }
+
+    sorted.forEach((s, idx) => {
+      const tr = document.createElement("tr");
+      tr.innerHTML = `
+        <td class="rank">#${idx + 1}</td>
+        <td class="name">${escapeHtml(s.name)}</td>
+        <td class="score">${s.score}</td>
+        <td>
+          <div class="actions">
+            <button class="btn ok" type="button" onclick="handleAction('plus','${s.id}')">+1</button>
+            <button class="btn bad" type="button" onclick="handleAction('minus','${s.id}')">-1</button>
+            <button class="btn" type="button" onclick="handleAction('del','${s.id}')">Удалить</button>
+          </div>
+        </td>
+      `;
+      tbody.appendChild(tr);
+    });
+  }
+
+  // --- Логика ---
+  function addStudent(name) {
+    name = normalizeName(name);
+    if (!name) return showToast("Введи имя 🙂");
+
+    if (data.some(x => x.name.toLowerCase() === name.toLowerCase())) {
+      return showToast("Такой ученик уже есть");
+    }
+
+    data.push({ id: uid(), name, score: 0, streak: 0 });
+    save();
+    render();
+    nameInput.value = "";
+    nameInput.focus();
+  }
+
+  // +1 / -1 и бонус +5 за 3 подряд
+  function changeScore(id, delta) {
+    const s = data.find(x => x.id === id);
+    if (!s) return;
+
+    if (typeof s.streak !== "number") s.streak = 0;
+
+    if (delta > 0) {
+      s.score += 1;
+      s.streak += 1;
+
+      if (s.streak === 3) {
+        s.score += 5;
+        s.streak = 0;
+        alert("🔥 Бонус +5 за регулярность!");
+      }
+    } else {
+      s.score = Math.max(0, s.score - 1);
+      s.streak = 0; // сброс серии если минус
+    }
+
+    save();
+    render();
+  }
+
+  function removeStudent(id) {
+    data = data.filter(x => x.id !== id);
+    save();
+    render();
+  }
+
+  // --- Кнопки действий (для onclick) ---
+  window.handleAction = function (act, id) {
+    if (act === "plus") changeScore(id, +1);
+    if (act === "minus") changeScore(id, -1);
+
+    if (act === "del") {
+      const s = data.find(x => x.id === id);
+      const ok = confirm(`Удалить "${s ? s.name : "ученика"}"?`);
+      if (ok) removeStudent(id);
+    }
+  };
+
+  // --- События ---
+  addBtn.addEventListener("click", () => addStudent(nameInput.value));
+  nameInput.addEventListener("keydown", (e) => {
+    if (e.key === "Enter") addStudent(nameInput.value);
+  });
+
+  demoBtn.addEventListener("click", () => {
+    const samples = ["ученик1", "ученик2", "ученик3", "ученик4"];
+    samples.forEach(n => {
+      if (!data.some(x => x.name.toLowerCase() === n.toLowerCase())) {
+        data.push({ id: uid(), name: n, score: 0, streak: 0 });
+      }
+    });
+    save();
+    render();
+  });
+
+  resetBtn.addEventListener("click", () => {
+    const ok = confirm("Точно сбросить всё? Данные удалятся из браузера.");
+    if (!ok) return;
+    data = [];
+    localStorage.removeItem(KEY);
+    showToast("Сброшено 🧹");
+    render();
+  });
+
+  exportBtn.addEventListener("click", () => {
+    jsonBox.value = JSON.stringify(data, null, 2);
+    showToast("Экспорт готов ✅");
+  });
+
+  importBtn.addEventListener("click", () => {
+    try {
+      const arr = JSON.parse(jsonBox.value || "[]");
+      if (!Array.isArray(arr)) throw new Error("JSON должен быть массивом");
+
+      const cleaned = arr
+        .filter(x => x && typeof x.name === "string")
+        .map(x => ({
+          id: x.id || uid(),
+          name: normalizeName(x.name),
+          score: Math.max(0, Math.floor(Number(x.score || 0))),
+          streak: Math.max(0, Math.floor(Number(x.streak || 0)))
+        }))
+        .filter(x => x.name.length > 0);
+
+      // убираем дубликаты имён
+      const seen = new Set();
+      data = cleaned.filter(x => {
+        const key = x.name.toLowerCase();
+        if (seen.has(key)) return false;
+        seen.add(key);
+        return true;
+      });
+
+      save();
+      render();
+      showToast("Импортировано ✅");
+    } catch (err) {
+      showToast("Ошибка импорта ❌");
+      alert("Не получилось импортировать JSON:\n" + err.message);
+    }
+  });
+
+  // --- Старт ---
+  render();
+</script>
